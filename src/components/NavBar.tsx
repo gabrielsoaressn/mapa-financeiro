@@ -12,6 +12,7 @@ export default function NavBar() {
       <span className="text-white font-bold text-lg">💰 Mapa Financeiro</span>
       <div className="flex items-center gap-1">
         <NavLink to="/dashboard" className={linkClass}>Dashboard</NavLink>
+        <NavLink to="/emprestimos" className={linkClass}>Empréstimos</NavLink>
         <NavLink to="/metas" className={linkClass}>Metas</NavLink>
         <button
           onClick={() => supabase.auth.signOut()}

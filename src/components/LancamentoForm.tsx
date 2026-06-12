@@ -1,23 +1,27 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Categoria, TipoFluxo } from '../types/database'
+import type { Categoria, Lancamento, TipoFluxo } from '../types/database'
 
 interface Props {
   onSuccess: () => void
+  lancamento?: Lancamento
+  onClose?: () => void
 }
 
 const RESPONSAVEIS = ['biel', 'jessi', 'casal']
 
-export default function LancamentoForm({ onSuccess }: Props) {
+export default function LancamentoForm({ onSuccess, lancamento, onClose }: Props) {
+  const isEdit = !!lancamento
+
   const [categorias, setCategorias] = useState<Categoria[]>([])
-  const [tipo, setTipo] = useState<TipoFluxo>('despesa')
-  const [descricao, setDescricao] = useState('')
-  const [valor, setValor] = useState('')
-  const [data, setData] = useState(new Date().toISOString().slice(0, 10))
-  const [categoriaId, setCategoriaId] = useState('')
-  const [responsavel, setResponsavel] = useState('casal')
-  const [parcelaAtual, setParcelaAtual] = useState('')
-  const [parcelaTotal, setParcelaTotal] = useState('')
+  const [tipo, setTipo] = useState<TipoFluxo>(lancamento?.tipo ?? 'despesa')
+  const [descricao, setDescricao] = useState(lancamento?.descricao ?? '')
+  const [valor, setValor] = useState(lancamento?.valor.toString() ?? '')
+  const [data, setData] = useState(lancamento?.data ?? new Date().toISOString().slice(0, 10))
+  const [categoriaId, setCategoriaId] = useState(lancamento?.categoria_id ?? '')
+  const [responsavel, setResponsavel] = useState(lancamento?.responsavel ?? 'casal')
+  const [parcelaAtual, setParcelaAtual] = useState(lancamento?.parcela_atual?.toString() ?? '')
+  const [parcelaTotal, setParcelaTotal] = useState(lancamento?.parcela_total?.toString() ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,7 +38,7 @@ export default function LancamentoForm({ onSuccess }: Props) {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.from('lancamentos').insert({
+    const payload = {
       descricao,
       valor: parseFloat(valor),
       data,
@@ -43,26 +47,30 @@ export default function LancamentoForm({ onSuccess }: Props) {
       responsavel,
       parcela_atual: parcelaAtual ? parseInt(parcelaAtual) : null,
       parcela_total: parcelaTotal ? parseInt(parcelaTotal) : null,
-      recorrente: false,
-    })
+    }
 
-    if (error) {
-      setError(error.message)
+    if (isEdit) {
+      const { error } = await supabase.from('lancamentos').update(payload).eq('id', lancamento.id)
+      if (error) { setError(error.message) } else { onSuccess(); onClose?.() }
     } else {
-      setDescricao('')
-      setValor('')
-      setParcelaAtual('')
-      setParcelaTotal('')
-      onSuccess()
+      const { error } = await supabase.from('lancamentos').insert({ ...payload, recorrente: false })
+      if (error) {
+        setError(error.message)
+      } else {
+        setDescricao('')
+        setValor('')
+        setParcelaAtual('')
+        setParcelaTotal('')
+        onSuccess()
+      }
     }
     setLoading(false)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4">
-      <h2 className="text-white font-semibold text-lg">Novo Lançamento</h2>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {!isEdit && <h2 className="text-white font-semibold text-lg">Novo Lançamento</h2>}
 
-      {/* Tipo */}
       <div className="flex gap-2">
         {(['despesa', 'renda'] as TipoFluxo[]).map(t => (
           <button
@@ -91,56 +99,47 @@ export default function LancamentoForm({ onSuccess }: Props) {
           />
         </div>
 
-        <div>
-          <input
-            type="number"
-            value={valor}
-            onChange={e => setValor(e.target.value)}
-            required
-            min="0.01"
-            step="0.01"
-            placeholder="Valor (R$)"
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-        </div>
+        <input
+          type="number"
+          value={valor}
+          onChange={e => setValor(e.target.value)}
+          required
+          min="0.01"
+          step="0.01"
+          placeholder="Valor (R$)"
+          className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+        />
 
-        <div>
-          <input
-            type="date"
-            value={data}
-            onChange={e => setData(e.target.value)}
-            required
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-        </div>
+        <input
+          type="date"
+          value={data}
+          onChange={e => setData(e.target.value)}
+          required
+          className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+        />
 
-        <div>
-          <select
-            value={categoriaId}
-            onChange={e => setCategoriaId(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-          >
-            <option value="">Categoria</option>
-            {categoriasDoTipo.map(c => (
-              <option key={c.id} value={c.id}>{c.grupo} › {c.nome}</option>
-            ))}
-          </select>
-        </div>
+        <select
+          value={categoriaId}
+          onChange={e => setCategoriaId(e.target.value)}
+          className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+        >
+          <option value="">Categoria</option>
+          {categoriasDoTipo.map(c => (
+            <option key={c.id} value={c.id}>{c.grupo} › {c.nome}</option>
+          ))}
+        </select>
 
-        <div>
-          <select
-            value={responsavel}
-            onChange={e => setResponsavel(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-          >
-            {RESPONSAVEIS.map(r => (
-              <option key={r} value={r} className="capitalize">{r}</option>
-            ))}
-          </select>
-        </div>
+        <select
+          value={responsavel}
+          onChange={e => setResponsavel(e.target.value)}
+          className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+        >
+          {RESPONSAVEIS.map(r => (
+            <option key={r} value={r} className="capitalize">{r}</option>
+          ))}
+        </select>
       </div>
 
-      {/* Parcelas (opcionais) */}
       <details className="group">
         <summary className="text-gray-500 text-sm cursor-pointer select-none hover:text-gray-300">
           + Parcelas (opcional)
@@ -165,17 +164,26 @@ export default function LancamentoForm({ onSuccess }: Props) {
         </div>
       </details>
 
-      {error && (
-        <p className="text-red-400 text-sm">{error}</p>
-      )}
+      {error && <p className="text-red-400 text-sm">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition-colors"
-      >
-        {loading ? 'Salvando…' : 'Salvar Lançamento'}
-      </button>
+      <div className="flex gap-3">
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold py-2.5 rounded-xl transition-colors"
+          >
+            Cancelar
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex-1 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition-colors"
+        >
+          {loading ? 'Salvando…' : isEdit ? 'Salvar Alterações' : 'Salvar Lançamento'}
+        </button>
+      </div>
     </form>
   )
 }

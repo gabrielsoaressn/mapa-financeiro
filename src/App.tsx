@@ -4,6 +4,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
+import EmprestimosPage from './pages/EmprestimosPage'
 import MetasPage from './pages/MetasPage'
 import UpdatePasswordPage from './pages/UpdatePasswordPage'
 import NavBar from './components/NavBar'
@@ -45,6 +46,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/emprestimos" element={<EmprestimosPage />} />
           <Route path="/metas" element={<MetasPage />} />
         </Routes>
       </div>
