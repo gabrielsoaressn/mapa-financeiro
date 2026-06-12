@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import LoginPage from './pages/LoginPage'
@@ -39,7 +39,7 @@ export default function App() {
   if (!session) return <LoginPage />
 
   return (
-    <BrowserRouter basename="/mapa-financeiro">
+    <HashRouter>
       <div className="min-h-screen bg-gray-950">
         <NavBar />
         <Routes>
@@ -48,6 +48,6 @@ export default function App() {
           <Route path="/metas" element={<MetasPage />} />
         </Routes>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
