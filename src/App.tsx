@@ -5,15 +5,23 @@ import { supabase } from './lib/supabase'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import MetasPage from './pages/MetasPage'
+import UpdatePasswordPage from './pages/UpdatePasswordPage'
 import NavBar from './components/NavBar'
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true)
+        setSession(session)
+      } else {
+        setPasswordRecovery(false)
+        setSession(session)
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -25,6 +33,8 @@ export default function App() {
       </div>
     )
   }
+
+  if (passwordRecovery) return <UpdatePasswordPage onDone={() => setPasswordRecovery(false)} />
 
   if (!session) return <LoginPage />
 
